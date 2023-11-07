@@ -108,7 +108,6 @@ def plot_waves(U, U_true, V, V_true, X, Y):
 
 
 def main():
-    fluids = {"water": (1, 0.01)}  # name: (density, viscosity)
     # Time step parameters
     dt = 0.1
     t_fin = 1
