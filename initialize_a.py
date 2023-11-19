@@ -15,7 +15,7 @@ def initialize_a(L, h, N, dt, rho, mu):
 
     a1 = np.empty((N, N, 2), dtype=np.complex128)
     a2 = np.empty((N, N, 2), dtype=np.complex128)
-
+    
     a1[:, :, 0] = 1 - (D1_hat**2) / (D1_hat**2 + D2_hat**2)
     a1[:, :, 1] = -(D1_hat * D2_hat) / (D1_hat**2 + D2_hat**2)
 

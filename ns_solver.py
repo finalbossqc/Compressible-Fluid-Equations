@@ -2,6 +2,7 @@ import numpy as np
 import scipy.fftpack as fft
 
 def ns_solver(U, V, f1, f2, dt, dx, rho, mu, a1, a2):
+
     # Periodic boundary conditions
     U_bc = np.column_stack((U[:, -1], U, U[:, 0]))
     U_bc = np.row_stack((U_bc[-1, :], U_bc, U_bc[0, :]))

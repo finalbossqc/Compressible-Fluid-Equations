@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from ns_solver import ns_solver
 from initialize_a import initialize_a
 from fluids import FLUIDS
+import warnings
 
 def calculate_fluid(fluid_tuple, dt, t_fin):
     rho = fluid_tuple[0]
@@ -109,8 +110,17 @@ def plot_waves(U, U_true, V, V_true, X, Y):
 
 def main():
     # Time step parameters
-    dt = 0.1
+    warnings.filterwarnings('ignore')
+    
+    dt = 0.05
     t_fin = 1
+    fluid = "water"
+    U, U_true, V, V_true, X, Y = calculate_fluid((1,0.01), dt, t_fin)
+    
+    print(U)
+    print(V)
+    
+    """
     while True:
         fluid = input("fluid: ")
         dt = float(input("time_step: "))
@@ -121,6 +131,7 @@ def main():
             continue
         U, U_true, V, V_true, X, Y = calculate_fluid(FLUIDS[fluid], dt, t_fin)
         plot_waves(U, U_true, V, V_true, X, Y)
+    """
 
 
 if __name__ == "__main__":
