@@ -242,14 +242,17 @@ def solve_ns_const_force_1(L, dx, Niter):
         u[:,:,ii+1], v[:,:,ii+1] = calculate_step(u[:,:,ii], v[:,:,ii], f1, f2, rho, mu, dx, dt)
         ii+=1
 
-    #Refactor this code such that the plotting capability is in its own
-    #Display results with animated heat map
+    args = (rho, mu, dx, dt, Niter)
+    arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ")
+    params = []
     
-    anim1 = plot_animated_heatmap(u)
-    anim2 = plot_animated_heatmap(v)
-    plt.show()
+    for i in range(len(args)):
+        params.append(str(arg_list[i]) + str(args[i]))
+
+    anim_u = plot_animated_heatmap(u, "u", params)
+    anim_v = plot_animated_heatmap(v, "v", params)
     
-    return anim1, anim2
+    return anim_u, anim_v
 
 """
 Description: Initializes the force density vector for the explosion problem.
@@ -359,7 +362,6 @@ def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, 
     f2 = np.zeros((N, N, Niter))
     
     #Initialize f1 and f2 for explosion
-    
     f1, f2 = init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, 0)
     
     ii = 0
