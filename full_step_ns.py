@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import scipy.fftpack as fft
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import time
 
 """
 Description: Calculates x component (w1) of v^(n) in Eq. 14.42 in Peskin 1996.
@@ -20,7 +24,7 @@ Returns:
 
 def calculate_w1(u, v, f1, f2, rho, dx, dt):
     M, N = u.shape
-    w1 = np.zeros((M,N))
+    w1 = 1j*np.zeros((M,N))
     
     i = 0
     while (i < M):
@@ -79,7 +83,7 @@ Returns:
 
 def calculate_w2(u, v, f1, f2, rho, dx, dt):
     M, N = u.shape
-    w2 = np.zeros((M,N))
+    w2 = 1j*np.zeros((M,N))
     
     i = 0
     while (i < M):
@@ -135,13 +139,13 @@ Returns:
     u: NxN numpy array
     v: NxN numpy array
 """
-def calculate_full_step(u, v, f1, f2, rho, mu, dx, dt):
+def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
     M, N = u.shape
     if (M != N):
         print("Grid must be square.")
         exit()
         
-    A = np.zeros((N,N))
+    A = 1j*np.zeros((N,N))
     k1 = 0
     while (k1 < N):
         k2 = 0
@@ -151,6 +155,7 @@ def calculate_full_step(u, v, f1, f2, rho, mu, dx, dt):
         k1+=1
     
     #Calculate w1 and w2
+
     w1 = calculate_w1(u, v, f1, f2, rho, dx, dt)
     w2 = calculate_w2(u, v, f1, f2, rho, dx, dt)
     
@@ -159,7 +164,7 @@ def calculate_full_step(u, v, f1, f2, rho, mu, dx, dt):
     w_hat_2 = fft.fft2(w2)
     
     #Calculate transformed pressure
-    p_hat = np.zeros((N,N))
+    p_hat = 1j*np.zeros((N,N))
     
     k1 = 0
     while (k1 < N):
@@ -173,18 +178,17 @@ def calculate_full_step(u, v, f1, f2, rho, mu, dx, dt):
                 top = ((1j/dx)*(np.sin(2*np.pi/N * k1))*w_hat_1[k1,k2] + (1j/dx)*(np.sin(2*np.pi/N * k2))*w_hat_2[k1,k2])
                 bottom = (-dt/(rho*dx**2) * ((np.sin(2*np.pi/N*k1))**2 + (np.sin(2*np.pi/N*k2))**2)) 
                 
-                if (bottom == 0): 
+                if (np.abs(bottom) < 0.000001): 
                     print("Warning: Division by zero")
+                    exit()
                     
                 p_hat[k1,k2] = top / bottom
             k2+=1
         k1+=1
     
-    #print(p_hat)
-    
     #Calculate transformed velocity in next timestep
-    u_hat = np.zeros((N, N))
-    v_hat = np.zeros((N, N))
+    u_hat = 1j*np.zeros((N, N))
+    v_hat = 1j*np.zeros((N, N))
     
     k1 = 0
     while (k1 < N):
@@ -202,63 +206,216 @@ def calculate_full_step(u, v, f1, f2, rho, mu, dx, dt):
         k1+=1
     
     
-    
-    
     #Transform velocity back
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
     
     return u, v
 
+"""
+Description: Initializes and solves the Navier stokes solver with a constant 
+force density.
+Arguments:
+    L: 1x1 integer
+        - Length of the fluid domain. The solver will generate a grid of length 
+        L x L and discretize it.
+    dx: 1x1 double
+        - the grid size
+    Niter: 1x1 integer
+        - the number of iterations
+"""
+def solve_ns_const_force_1(L, dx, Niter):
+    N = int(L/dx)
+    
+    u = np.zeros((N, N, Niter))
+    v = np.ones((N, N, Niter))
+    f1 = np.ones((N, N))
+    f2 = np.zeros((N, N))
+    
+    rho = 1
+    mu = 1
+    dx = dx
+    dt = 0.2
+    
+    ii = 0
+    while (ii < Niter-1):
+        u[:,:,ii+1], v[:,:,ii+1] = calculate_step(u[:,:,ii], v[:,:,ii], f1, f2, rho, mu, dx, dt)
+        ii+=1
 
-def fft1D(x):
-    N = len(x)
+    #Refactor this code such that the plotting capability is in its own
+    #Display results with animated heat map
     
-    if N <= 1:
-        return x
+    anim1 = plot_animated_heatmap(u)
+    anim2 = plot_animated_heatmap(v)
+    plt.show()
     
-    even = fft1D(x[0::2])
-    odd = fft1D(x[1::2])
-    
-    T = [np.exp(-2j * np.pi * k / N) * odd[k] for k in range(N // 2)]
-    
-    return np.concatenate([even + T, even - T])
+    return anim1, anim2
 
-def fft2D(x):
-    rows, cols = x.shape
+"""
+Description: Initializes the force density vector for the explosion problem.
+Arguments:
+    f1: NxN numpy array
+        - The x component of force density
+    f2: NxN numpy array
+        - The y component of force density
+    icenter: 1x1 integer (nonnegative)
+        - The x coordinate of the center gridpoint of the explosion
+    jcenter: 1x1 integer (nonnegative)
+        - The y coordinate of the center gridpoint of the explosion
+    magx: 1x1 double (positive values only)
+        - The magnitude of the x-component of the force
+    magy: 1x1 double (positive values only)
+        - The magnitude of the y-component of the force
+    radius: 1x1 double (positive values only)
+        - The radius of the explosion
+    tstart: 1x1 integer (nonnegative)
+        - The starting timestep
+    tend: 1x1 integer (nonnegative)
+        - The ending timestep
+    explosion_type: 0 or 1
+        - 0 is for a 3DD Gaussian
+        - 1 is for a regularized Dirac delta
+Warnings:
+    * Be careful not to let the explosion radius interact with the boundaries.
+    This solver uses periodic boundary conditions, so if any of your waves
+    reach the boundary, they can cause self-interference and your velocities
+    will increase rapidly until you get overflow errors.
+    Your results will literally explode and not in a good way! Either 
+    keep the radius small or make the grid size very large to counteract this.
     
-    # FFT along the rows
-    for i in range(rows):
-        x[i, :] = fft1D(x[i, :])
+    ** If the impulse (force * (tstart - tend)*dt) is too big, it will create
+    a wave that travels all the way to the boundary. Once again, this causes
+    self-interference and will mess with your results.
     
-    # FFT along the columns
-    for j in range(cols):
-        x[:, j] = fft1D(x[:, j])
+"""
+def init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
+    f1[icenter,jcenter,tstart:tend] = 0
+    f2[icenter,jcenter,tstart:tend] = 0
+    M, N, T = f1.shape;
     
-    return x
+    def gauss_3d(i, j, t):
+        return magx*np.exp(-1*( (i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2)), magy*np.exp(-1*( (i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2))
+    
+    i = 0
+    while (i < N):
+        j = 0
+        while (j < N):
+            k = 0
+            while (k < T):
+                if ((i-icenter)**2 + (j-jcenter)**2 <= radius**2 and k >= tstart and k <= tend):  
+                    if (explosion_type == 0):
+                        f1[i, j, k], f2[i, j, k] = gauss_3d(i, j, k)
+                    elif (explosion_type == 1):
+                        #Implement this (TODO)
+                        pass
+                    else:
+                        print("Invalid explosion type")
+                        exit()
+                k+=1
+            j+=1
+        i+=1
+    return f1, f2
 
-def ifft1D(x):
-    N = len(x)
+"""
+Description: Initializes and solves the Navier stokes solver with an explosion.
+Arguments:
+    rho: 1x1 double
+        - Density of the fluid
+    mu: 1x1 double
+        - Viscosity (Newtonian fluid)
+    L: 1x1 integer
+        - Length of the fluid domain. The solver will generate a grid of length 
+        L x L and discretize it.
+    dx: 1x1 double
+        - the grid size
+    dt: 1x1 ddouble
+        - the timestep size
+    Niter: 1x1 integer
+        - the number of iterations
+    icenter: 1x1 integer (nonnegative)
+        - The x coordinate of the center gridpoint of the explosion
+    jcenter: 1x1 integer (nonnegative)
+        - The y coordinate of the center gridpoint of the explosion
+    magx: 1x1 double (positive values only)
+        - The magnitude of the x-component of the force
+    magy: 1x1 double (positive values only)
+        - The magnitude of the y-component of the force
+    radius: 1x1 double (positive values only)
+        - The radius of the explosion
+    tstart: 1x1 integer (nonnegative)
+        - The starting timestep
+    tend: 1x1 integer (nonnegative)
+        - The ending timestep
+    explosion_type: 0 or 1
+        - 0 is for a 3D Gaussian
+        - 1 is for a regularized Dirac delta
+"""
+def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type): 
+    N = int(L/dx)
     
-    if N <= 1:
-        return x
+    u = np.zeros((N, N, Niter))
+    v = np.zeros((N, N, Niter))
+    f1 = np.zeros((N, N, Niter))
+    f2 = np.zeros((N, N, Niter))
     
-    even = ifft1D(x[0::2])
-    odd = ifft1D(x[1::2])
+    #Initialize f1 and f2 for explosion
     
-    T = [np.exp(2j * np.pi * k / N) * odd[k] for k in range(N // 2)]
+    f1, f2 = init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, 0)
     
-    return np.concatenate([even + T, even - T])
+    ii = 0
+    while (ii < Niter-1):
+        u[:,:,ii+1], v[:,:,ii+1] = calculate_step(u[:,:,ii], v[:,:,ii], f1[:,:,ii], f2[:,:,ii], rho, mu, dx, dt)
+        ii+=1
+    
+    args = (rho, mu, dx, dt, Niter, magx, magy, radius)
+    arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ", "magx: ", "magy: ", "radius: ")
+    params = []
+    
+    for i in range(len(args)):
+        params.append(str(arg_list[i]) + str(args[i]))
+    
+    #Display results with animated heat map
+    anim_u = plot_animated_heatmap(u, "u", params);
+    anim_v = plot_animated_heatmap(v, "v", params);
 
-def ifft2D(x):
-    rows, cols = x.shape
+    return anim_u, anim_v
+
+"""
+Description: A plotting function
+"""
+def plot_animated_heatmap(u, variable, params):
+    _, _, Niter = u.shape
+    def init_heatmap(i):
+        ax.cla()
+        sns.heatmap(u[:,:,i],
+                    ax = ax,
+                    cbar = True,
+                    cbar_ax = cbar_ax,
+                    vmin = u.min(),
+                    vmax = u.max())
     
-    # IFFT along the rows
-    for i in range(rows):
-        x[i, :] = ifft1D(x[i, :])
+    grid_kws = {'width_ratios': (0.9, 0.05), 'wspace': 0.2}
+    fig, (ax, cbar_ax) = plt.subplots(1, 2, gridspec_kw = grid_kws, figsize = (10, 8))
+    fig.suptitle("Velocity " + variable + " Parameter List: " + str(params))
+    anim = animation.FuncAnimation(fig = fig, func = init_heatmap, frames = Niter, interval = 50, blit = False)
+    return anim
+
+def main():
+    # Run
+    N = int(50/0.3)
+    t0 = time.perf_counter()
+    anim_u, anim_v = solve_ns_explosion(1, 100, 50, 0.3, 0.02, 20, N//2, N//2, 1000, 1000, 20, 2, 6, 0)
+    tf = time.perf_counter()
+    print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
+    #
     
-    # IFFT along the columns
-    for j in range(cols):
-        x[:, j] = ifft1D(x[:, j])
-    
-    return x  # Normalize by the number of elements
+    writer = animation.PillowWriter(fps=15,metadata=dict(artist='Me'),bitrate=1800)
+    anim_u.save('u_plot.gif', writer=writer)
+    anim_v.save('v_plot.gif', writer=writer)
+    plt.show()
+    plt.close()
+
+main();
+
+
+

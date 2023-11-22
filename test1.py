@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from full_step_ns import calculate_full_step
+from full_step_ns import calculate_step
+import matplotlib.pyplot as plt
 import numpy as np
 
 def main():
@@ -14,6 +15,13 @@ def main():
     dx = 1/N
     dt = 0.2
     
-    u_next, v_next = calculate_full_step(u, v, f1, f2, rho, mu, dx, dt)
+    u_next, v_next = calculate_step(u, v, f1, f2, rho, mu, dx, dt)
+    
+    print(u_next)
+    print(v_next)
+    
+    fig, ax = plt.subplots()
+    ax.imshow(u_next)
+    plt.show()
     
 main()
