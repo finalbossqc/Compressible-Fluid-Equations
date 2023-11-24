@@ -8,17 +8,16 @@ import matplotlib.animation as animation
 from matplotlib.colors import LinearSegmentedColormap
 import time
 
-
 def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
     M, N = u.shape
-
+    
     if (M != N):
         print("Grid length and width must be the same")
         exit()
-
-    w1 = 1j*np.zeros((N, N))
-    w2 = 1j*np.zeros((N, N))
-
+        
+    w1 = 1j*np.zeros((N,N))
+    w2 = 1j*np.zeros((N,N))
+    
     i = 0
     while (i < N):
         j = 0
@@ -27,8 +26,8 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
             i_minus_1 = i-1
             j_plus_1 = j+1
             j_minus_1 = j-1
-
-            # Implement Periodic Boundary Conditions
+            
+            #Implement Periodic Boundary Conditions
             if (i == N-1):
                 i_plus_1 = 0
             if (i == 0):
@@ -37,79 +36,84 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
                 j_plus_1 = 0
             if (j == 0):
                 j_minus_1 = N-1
-
-            # Calculate central finite differences
-            Du1 = (u[i_plus_1, j]-u[i_minus_1, j])/(2*dx)
-            Du2 = (u[i, j_plus_1] - u[i, j_minus_1])/(2*dx)
-            Dv1 = (v[i_plus_1, j]-v[i_minus_1, j])/(2*dx)
-            Dv2 = (v[i, j_plus_1]-v[i, j_minus_1])/(2*dx)
-
-            Duu1 = (u[i_plus_1, j]**2 - u[i_minus_1, j]**2)/(2*dx)
-            Duv2 = (u[i, j_plus_1]*v[i, j_plus_1] -
-                    u[i, j_minus_1]*v[i, j_minus_1])/(2*dx)
-            Duv1 = (u[i_plus_1, j]*v[i_plus_1, j] -
-                    u[i_minus_1, j]*v[i_minus_1, j])/(2*dx)
-            Dvv2 = (v[i, j_plus_1]**2 - v[i, j_minus_1]**2)/(2*dx)
-
-            S1 = 1/2*(u[i, j]*Du1 + v[i, j]*Du2) + 1/2*(Duu1 + Duv2)
-            S2 = 1/2*(u[i, j]*Dv1 + v[i, j]*Dv2) + 1/2*(Duv1 + Dvv2)
-
-            #print(S1, S1)
-
-            w1[i, j] = u[i, j]
-            w2[i, j] = v[i, j]
-
-            # Calculate w1 and w2
+            
+            #Find upwind finite differences
+            
+            Du1 = 0
+            Du2 = 0
+            Dv1 = 0
+            Dv2 = 0
+            
+            if (u[i, j] < 0):
+                Du1 = (u[i_plus_1, j] - u[i,j])/dx
+                Du2 = (u[i, j_plus_1] - u[i,j])/dx
+            else:
+                Du1 = (u[i,j] - u[i_minus_1,j])/dx
+                Du2 = (u[i,j] - u[i,j_minus_1])/dx
+            
+            if (v[i,j] < 0):
+                Dv1 = (v[i_plus_1,j]-v[i,j])/dx
+                Dv2 = (v[i, j_plus_1]-v[i,j])/dx
+            else:
+                Dv1 = (v[i,j] - v[i_minus_1,j])/dx
+                Dv2 = (v[i,j]- v[i,j_minus_1])/dx
+                
+            
+            S1 = u[i,j]*Du1 + v[i,j]*Du2
+            S2 = u[i,j]*Dv1 + v[i,j]*Dv2
+            
+            w1[i,j] = u[i,j]
+            w2[i,j] = v[i,j]
+            
+            #Calculate w1 and w2
             if (half == 0):
-                w1[i, j] -= (dt/2)*S1 - (dt/(2*rho))*f1[i, j]
-                w2[i, j] -= (dt/2)*S2 - (dt/(2*rho))*f2[i, j]
+                w1[i,j] -= (dt/2)*S1 - (dt/(2*rho))*f1[i,j]
+                w2[i,j] -= (dt/2)*S2 - (dt/(2*rho))*f2[i,j]
             elif (half == 1):
-                Lu = (1/(dx**2))*(u[i_plus_1, j] + u[i_minus_1, j] - 4*u[i, j] + u[i, j_plus_1] + u[i, j_minus_1])
-                Lv = (1/(dx**2))*(v[i_plus_1, j] + v[i_minus_1, j] - 4*v[i, j] + v[i, j_plus_1] + v[i, j_minus_1])
-
-                w1[i, j] -= dt*S1 - (dt/rho)*f1[i, j] - (dt*mu/(2*rho))*Lu
-                w2[i, j] -= dt*S2 - (dt/rho)*f2[i, j] - (dt*mu/(2*rho))*Lv
-            j += 1
-        i += 1
-
+                Lu = (1/(dx**2))*(u[i_plus_1,j] + u[i_minus_1,j] - 4*u[i,j] + u[i,j_plus_1] + u[i,j_minus_1])
+                Lv = (1/(dx**2))*(v[i_plus_1,j] + v[i_minus_1,j] - 4*v[i,j] + v[i,j_plus_1] + v[i,j_minus_1])
+                
+                w1[i,j] -= dt*S1 - (dt/rho)*f1[i,j] - (dt*mu/(2*rho))*Lu
+                w2[i,j] -= dt*S2 - (dt/rho)*f2[i,j] - (dt*mu/(2*rho))*Lv
+            j+=1
+        i+=1
+    
     return w1, w2
-
 
 def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
     M, N = u.shape
     if (M != N):
         print("Grid must be square.")
-
-    # __________________________________________________________________________
-    # Half step:
-    # Calculate w1 and w2
+    
+    #__________________________________________________________________________
+    #Half step:
+    #Calculate w1 and w2
     w1, w2 = calculate_w(u, v, f1, f2, rho, mu, dx, dt, 0)
-
-    # Take Fourier transforms
+    
+    #Take Fourier transforms
     w_hat_1 = fft.fft2(w1)
     w_hat_2 = fft.fft2(w2)
-
-    # Initialize velocity and pressure
-    u_hat = 1j*np.zeros((N, N))
-    v_hat = 1j*np.zeros((N, N))
-
-    # Initilize matrices and transformed operators
-    D_hat_1 = 1j*np.zeros((N, N))
-    D_hat_2 = 1j*np.zeros((N, N))
-    L_hat = 1j*np.zeros((N, N))
-
+    
+    #Initialize velocity and pressure
+    u_hat = 1j*np.zeros((N,N))
+    v_hat = 1j*np.zeros((N,N))
+    
+    #Initilize matrices and transformed operators
+    D_hat_1 = 1j*np.zeros((N,N))
+    D_hat_2 = 1j*np.zeros((N,N))
+    L_hat = 1j*np.zeros((N,N))
+    
     m1 = 0
     while (m1 < N):
         m2 = 0
         while (m2 < N):
-            D_hat_1[m1, m2] = (1j/dx)*np.sin(2*np.pi*m1*dx/N)
-            D_hat_2[m1, m2] = (1j/dx)*np.sin(2*np.pi*m2*dx/N)
-            L_hat[m1, m2] = (-4/(dx**2))*(np.sin(np.pi*m1*dx/N)
-                                          ** 2 + np.sin(np.pi*m2*dx/N)**2)
+            D_hat_1[m1,m2] = (1j/dx)*np.sin(2*np.pi*m1*dx/N)
+            D_hat_2[m1,m2] = (1j/dx)*np.sin(2*np.pi*m2*dx/N)
+            L_hat[m1,m2] = (-4/(dx**2))*(np.sin(np.pi*m1*dx/N)**2 + np.sin(np.pi*m2*dx/N)**2)
             m2 += 1
-        m1 += 1
-
-    # Calculate transformed velocity
+        m1+=1
+    
+    #Calculate transformed velocity
     m1 = 0
     while (m1 < N):
         m2 = 0
@@ -118,47 +122,47 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
             a12 = 0*1j
             a21 = 0*1j
             a22 = 0*1j
-
-            if (np.abs(D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2) < 0.0001):
+            
+            if (np.abs(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2) < 0.0001):
                 a11 = 1
                 a12 = 0
                 a21 = 0
                 a22 = 1
             else:
-                a11 = (1 - D_hat_1[m1, m2]**2 / (D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2))
-                a12 = -D_hat_1[m1, m2]*D_hat_2[m1, m2] / (D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2)
-                a21 = -D_hat_1[m1, m2]*D_hat_2[m1, m2] / (D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2)
-                a22 = (1 - D_hat_2[m1, m2]**2 / (D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2))
-
+                a11 = (1 - D_hat_1[m1,m2]**2/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2))
+                a12 = -D_hat_1[m1,m2]*D_hat_2[m1,m2]/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2)
+                a21 = -D_hat_1[m1,m2]*D_hat_2[m1,m2]/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2)
+                a22 = (1 - D_hat_2[m1,m2]**2/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2))
+                
                 if (np.isnan(a11)):
                     print(m1, m2)
                     exit()
-
-            u_hat[m1, m2] = (w_hat_1[m1, m2]*a11 + w_hat_2[m1, m2] * a12) / (1 - mu*dt/(2*rho)*L_hat[m1, m2])
-            v_hat[m1, m2] = (w_hat_1[m1, m2]*a21 + w_hat_2[m1, m2] * a22) / (1 - mu*dt/(2*rho)*L_hat[m1, m2])
-
-            m2 += 1
-        m1 += 1
-
-    # Transform velocity back
-
+            
+            u_hat[m1,m2] = (w_hat_1[m1,m2]*a11 + w_hat_2[m1,m2]*a12) / (1 - mu*dt/(2*rho)*L_hat[m1,m2])
+            v_hat[m1,m2] = (w_hat_1[m1,m2]*a21 + w_hat_2[m1,m2]*a22) / (1 - mu*dt/(2*rho)*L_hat[m1,m2])
+            
+            m2+=1
+        m1+=1
+    
+    #Transform velocity back
+    
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
-
-    # __________________________________________________________________________
-    # Full step
-    # Calculate w1 and w2
+    
+    #__________________________________________________________________________
+    #Full step
+    #Calculate w1 and w2
     w1, w2 = calculate_w(u, v, f1, f2, rho, mu, dx, dt, 1)
-
-    # Take Fourier transforms
+    
+    #Take Fourier transforms
     w_hat_1 = fft.fft2(w1)
     w_hat_2 = fft.fft2(w2)
-
-    # Initialize velocity and pressure
-    u_hat = 1j*np.zeros((N, N))
-    v_hat = 1j*np.zeros((N, N))
-
-    # Calculate transformed velocity
+    
+    #Initialize velocity and pressure
+    u_hat = 1j*np.zeros((N,N))
+    v_hat = 1j*np.zeros((N,N))
+    
+    #Calculate transformed velocity
     m1 = 0
     while (m1 < N):
         m2 = 0
@@ -167,33 +171,30 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
             a12 = 0*1j
             a21 = 0*1j
             a22 = 0*1j
-
-            if (np.abs(D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2) < 0.0001):
+            
+            if (np.abs(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2) < 0.0001):
                 a11 = 1
                 a12 = 0
                 a21 = 0
                 a22 = 1
             else:
-                a11 = (1 - D_hat_1[m1, m2]**2 / (D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2))
-                a12 = -D_hat_1[m1, m2]*D_hat_2[m1, m2] / (D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2)
-                a21 = -D_hat_1[m1, m2]*D_hat_2[m1, m2] / (D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2)
-                a22 = (1 - D_hat_2[m1, m2]**2 / (D_hat_1[m1, m2]**2 + D_hat_2[m1, m2]**2))
-
-            u_hat[m1, m2] = (w_hat_1[m1, m2]*a11 + w_hat_2[m1, m2]
-                             * a12) / (1 - mu*dt/(2*rho)*L_hat[m1, m2])
-            v_hat[m1, m2] = (w_hat_1[m1, m2]*a21 + w_hat_2[m1, m2]
-                             * a22) / (1 - mu*dt/(2*rho)*L_hat[m1, m2])
-
-            m2 += 1
-        m1 += 1
-
-    # Transform velocity back
-
+                a11 = (1 - D_hat_1[m1,m2]**2/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2))
+                a12 = -D_hat_1[m1,m2]*D_hat_2[m1,m2]/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2)
+                a21 = -D_hat_1[m1,m2]*D_hat_2[m1,m2]/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2)
+                a22 = (1 - D_hat_2[m1,m2]**2/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2))
+            
+            u_hat[m1,m2] = (w_hat_1[m1,m2]*a11 + w_hat_2[m1,m2]*a12) / (1 - mu*dt/(2*rho)*L_hat[m1,m2])
+            v_hat[m1,m2] = (w_hat_1[m1,m2]*a21 + w_hat_2[m1,m2]*a22) / (1 - mu*dt/(2*rho)*L_hat[m1,m2])
+            
+            m2+=1
+        m1+=1
+    
+    #Transform velocity back
+    
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
     
     return u, v
-
 
 """
 Description: Initializes and solves the Navier stokes solver with a constant 
@@ -207,49 +208,29 @@ Arguments:
     Niter: 1x1 integer
         - the number of iterations
 """
-
-
 def solve_ns_const_force_1(L, dx, Niter):
     N = int(L/dx)
-
+    
     u = np.zeros((N, N, Niter))
     v = np.zeros((N, N, Niter))
     f1 = np.ones((N, N))
     f2 = np.zeros((N, N))
-
+    
     rho = 1
     mu = 0.01
     dx = dx
     dt = 0.05
-
-    err = np.zeros(Niter)
-
+    
     ii = 0
     while (ii < Niter-1):
         print("iteration: ", ii)
-        u[:, :, ii+1], v[:, :, ii +
-                         1] = calculate_step(u[:, :, ii], v[:, :, ii], f1, f2, rho, mu, dx, dt)
-        err[ii] = np.abs(np.average(v[:, :, ii+1]-np.zeros((N, N))))
-        print(err[ii])
-        ii += 1
-
-    x = np.arange(0, Niter)
-    y = np.zeros(len(err))
-
-    for i in range(len(err)):
-        if (err[i] == 0):
-            y[i] = 0
-        else:
-            y[i] = np.log10(err[i])
-
-    plt.plot(x, y)
-    plt.show()
-    np.savetxt("half_step_error.txt", y[10:630])
+        u[:,:,ii+1], v[:,:,ii+1] = calculate_step(u[:,:,ii], v[:,:,ii], f1, f2, rho, mu, dx, dt)
+        ii+=1
 
     args = (rho, mu, dx, dt, Niter)
     arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ")
     params = []
-
+    
     for i in range(len(args)):
         params.append(str(arg_list[i]) + str(args[i]))
 
@@ -257,7 +238,6 @@ def solve_ns_const_force_1(L, dx, Niter):
     anim_v = plot_animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
-
 
 """
 Description: Initializes the force density vector for the explosion problem.
@@ -296,36 +276,33 @@ Warnings:
     self-interference and will mess with your results.
     
 """
-
-
 def init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
-    f1[icenter, jcenter, tstart:tend] = 0
-    f2[icenter, jcenter, tstart:tend] = 0
-    M, N, T = f1.shape
-
+    f1[icenter,jcenter,tstart:tend] = 0
+    f2[icenter,jcenter,tstart:tend] = 0
+    M, N, T = f1.shape;
+    
     def gauss_3d(i, j, t):
-        return magx*np.exp(-1*((i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2)), magy*np.exp(-1*((i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2))
-
+        return magx*np.exp(-1*( (i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2)), magy*np.exp(-1*( (i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2))
+    
     i = 0
     while (i < N):
         j = 0
         while (j < N):
             k = 0
             while (k < T):
-                if ((i-icenter)**2 + (j-jcenter)**2 <= radius**2 and k >= tstart and k <= tend):
+                if ((i-icenter)**2 + (j-jcenter)**2 <= radius**2 and k >= tstart and k <= tend):  
                     if (explosion_type == 0):
                         f1[i, j, k], f2[i, j, k] = gauss_3d(i, j, k)
                     elif (explosion_type == 1):
-                        # Implement this (TODO)
+                        #Implement this (TODO)
                         pass
                     else:
                         print("Invalid explosion type")
                         exit()
-                k += 1
-            j += 1
-        i += 1
+                k+=1
+            j+=1
+        i+=1
     return f1, f2
-
 
 """
 Description: Initializes and solves the Navier stokes solver with an explosion.
@@ -361,42 +338,35 @@ Arguments:
         - 0 is for a 3D Gaussian
         - 1 is for a regularized Dirac delta
 """
-
-
-def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
+def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type): 
     N = int(L/dx)
-
+    
     u = np.zeros((N, N, Niter))
     v = np.zeros((N, N, Niter))
     f1 = np.zeros((N, N, Niter))
     f2 = np.zeros((N, N, Niter))
-
-    # Initialize f1 and f2 for explosion
-
-    f1, f2 = init_explosion(f1, f2, icenter, jcenter,
-                            magx, magy, radius, tstart, tend, 0)
-
+    
+    #Initialize f1 and f2 for explosion
+    
+    f1, f2 = init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, 0)
+    
     ii = 0
     while (ii < Niter-1):
         print(ii)
-        u[:, :, ii+1], v[:, :, ii+1] = calculate_step(
-            u[:, :, ii], v[:, :, ii], f1[:, :, ii], f2[:, :, ii], rho, mu, dx, dt)
-        ii += 1
-
+        u[:,:,ii+1], v[:,:,ii+1] = calculate_step(u[:,:,ii], v[:,:,ii], f1[:,:,ii], f2[:,:,ii], rho, mu, dx, dt)
+        ii+=1
+    
     args = (rho, mu, dx, dt, Niter, magx, magy, radius)
-    arg_list = ("rho: ", "mu: ", "dx: ", "dt: ",
-                "Niter: ", "magx: ", "magy: ", "radius: ")
+    arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ", "magx: ", "magy: ", "radius: ")
     params = []
-
+    
     for i in range(len(args)):
         params.append(str(arg_list[i]) + str(args[i]))
-
-    # Display results with animated heat map
-    anim_u = plot_animated_heatmap(u, "u", params)
-    anim_v = plot_animated_heatmap(v, "v", params)
-
+    
+    #Display results with animated heat map
+    anim_u = plot_animated_heatmap(u, "u", params);
+    anim_v = plot_animated_heatmap(v, "v", params);
     return anim_u, anim_v
-
 
 """
 Description: A plotting function that creates an animated heatmap
@@ -426,12 +396,12 @@ def plot_animated_heatmap(u, variable, params):
     return anim
 
 def main():
-    dx = 1
-    L = 200
+    dx = 0.3
+    L = 50
     N = int(L/dx)
     t0 = time.perf_counter()
     
-    anim_u, anim_v = solve_ns_explosion(1, 100, L, dx, 0.03, 40, N//2, N//2, 100, 100, 8, 2, 6, 0)
+    anim_u, anim_v = solve_ns_explosion(1, 100, L, dx, 0.08, 20, N//2, N//2, 1000, 1000, 8, 2, 6, 0)
     
     tf = time.perf_counter()
     print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
@@ -441,6 +411,5 @@ def main():
     anim_v.save('v_plot.gif', writer=writer)
     plt.show()
     plt.close()
-
 
 main()
