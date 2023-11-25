@@ -5,6 +5,7 @@ import scipy.fftpack as fft
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.colors import LinearSegmentedColormap
 import time
 
 """
@@ -204,12 +205,11 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
                 v_hat[k1,k2] = (w_hat_2[k1,k2] - 1j*dt/(rho*dx)*np.sin(2*np.pi*k2/N)*p_hat[k1,k2]) / A[k1,k2]
             k2+=1
         k1+=1
-    
-    
+
     #Transform velocity back
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
-    
+
     return u, v
 
 """
@@ -228,20 +228,34 @@ def solve_ns_const_force_1(L, dx, Niter):
     N = int(L/dx)
     
     u = np.zeros((N, N, Niter))
-    v = np.ones((N, N, Niter))
+    v = np.zeros((N, N, Niter))
     f1 = np.ones((N, N))
     f2 = np.zeros((N, N))
     
     rho = 1
-    mu = 1
+    mu = 0.01
     dx = dx
-    dt = 0.2
+    dt = 0.05
+    
+    err = np.zeros(Niter)
     
     ii = 0
     while (ii < Niter-1):
+        print("iteration:", ii)
         u[:,:,ii+1], v[:,:,ii+1] = calculate_step(u[:,:,ii], v[:,:,ii], f1, f2, rho, mu, dx, dt)
+        err[ii] = np.abs(np.average(v[:,:,ii+1]-np.zeros((N,N))))
         ii+=1
-
+    
+    y = np.zeros(len(err))
+    
+    for i in range(len(err)):
+        if (err[i] == 0):
+            y[i] = 0
+        else:
+            y[i] = np.log10(err[i])
+    
+    np.savetxt("full_step_error.txt", y[10:630])
+        
     args = (rho, mu, dx, dt, Niter)
     arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ")
     params = []
@@ -251,7 +265,7 @@ def solve_ns_const_force_1(L, dx, Niter):
 
     anim_u = plot_animated_heatmap(u, "u", params)
     anim_v = plot_animated_heatmap(v, "v", params)
-    
+
     return anim_u, anim_v
 
 """
@@ -355,8 +369,8 @@ Arguments:
 """
 def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type): 
     N = int(L/dx)
-    
-    u = np.zeros((N, N, Niter))
+
+    u = np.ones((N, N, Niter))
     v = np.zeros((N, N, Niter))
     f1 = np.zeros((N, N, Niter))
     f2 = np.zeros((N, N, Niter))
@@ -377,13 +391,20 @@ def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, 
         params.append(str(arg_list[i]) + str(args[i]))
     
     #Display results with animated heat map
-    anim_u = plot_animated_heatmap(u, "u", params);
-    anim_v = plot_animated_heatmap(v, "v", params);
+    anim_u = plot_animated_heatmap(u, "u", params)
+    anim_v = plot_animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
 
 """
-Description: A plotting function
+Description: A plotting function that creates an animated heatmap
+Arguments:
+    u: NxN double
+        - The velocity (either x or y velocity)
+    variable: string
+        - The name of the variable to be plotted.
+    params: tuple 
+        - A tuple of parameters to be put in the title
 """
 def plot_animated_heatmap(u, variable, params):
     _, _, Niter = u.shape
@@ -409,7 +430,6 @@ def main():
     anim_u, anim_v = solve_ns_explosion(1, 100, 50, 0.3, 0.02, 20, N//2, N//2, 1000, 1000, 20, 2, 6, 0)
     tf = time.perf_counter()
     print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
-    #
     
     writer = animation.PillowWriter(fps=15,metadata=dict(artist='Me'),bitrate=1800)
     anim_u.save('u_plot.gif', writer=writer)
@@ -417,7 +437,7 @@ def main():
     plt.show()
     plt.close()
 
-main();
+main()
 
 
 
