@@ -205,12 +205,11 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
                 v_hat[k1,k2] = (w_hat_2[k1,k2] - 1j*dt/(rho*dx)*np.sin(2*np.pi*k2/N)*p_hat[k1,k2]) / A[k1,k2]
             k2+=1
         k1+=1
-    
+
     #Transform velocity back
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
-    
-    
+
     return u, v
 
 """
@@ -256,8 +255,6 @@ def solve_ns_const_force_1(L, dx, Niter):
             y[i] = np.log10(err[i])
     
     np.savetxt("full_step_error.txt", y[10:630])
-    
-    exit()
         
     args = (rho, mu, dx, dt, Niter)
     arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ")
@@ -372,7 +369,7 @@ Arguments:
 """
 def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type): 
     N = int(L/dx)
-    
+
     u = np.ones((N, N, Niter))
     v = np.zeros((N, N, Niter))
     f1 = np.zeros((N, N, Niter))
@@ -396,7 +393,6 @@ def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, 
     #Display results with animated heat map
     anim_u = plot_animated_heatmap(u, "u", params)
     anim_v = plot_animated_heatmap(v, "v", params)
-    #anim_uv = plot_animated_quiver(u, v, N, L, dx, "(u,v)", params)
 
     return anim_u, anim_v
 
@@ -427,69 +423,11 @@ def plot_animated_heatmap(u, variable, params):
     anim = animation.FuncAnimation(fig = fig, func = init_heatmap, frames = Niter, interval = 50, blit = False)
     return anim
 
-"""
-Description: A plotting function that creates an animated quiver
-plot (NOT FUNCTIONAL).
-Arguments:
-    u: NxN double
-        - The velocity (either x or y velocity)
-    variable: string
-        - The name of the variable to be plotted.
-    params: tuple 
-        - A tuple of parameters to be put in the title
-"""
-def plot_animated_quiver(u, v, N, L, dx, variable, params):
-    _, N, Niter = u.shape
-    x, y = np.meshgrid(np.linspace(0, L, N),  
-                       np.linspace(0, L, N))
-    
-    magnitude = np.sqrt(u**2 + v**2)
-
-    # Normalize the vectors to have the same length
-    u_normalized = u
-    v_normalized = v
-
-    i = 0
-    while (i < N):
-        j = 0
-        while (j < N):
-            k = 0
-            while (k < Niter):
-                if (magnitude[i,j,k] == 0):
-                    u_normalized[i,j,k] = 0
-                    v_normalized[i,j,k] = 0
-                else:
-                    u_normalized[i,j,k] /= magnitude[i,j,k]
-                    v_normalized[i,j,k] /= magnitude[i,j,k]
-                k+=1
-            j+=1
-        i+=1
-    
-    
-    cmap = LinearSegmentedColormap.from_list('black_to_red', ['black', 'red'])
-    
-    def init_quiver(i):
-        plt.cla()
-        plt.quiver(x, y, u_normalized[:,:,i], v_normalized[:,:,i], magnitude[:,:,i], cmap=cmap, width=0.010, headwidth=3)
-        if (i == 1):
-            cbar = plt.colorbar()
-            cbar.set_label("Magnitude")
-    
-    #grid_kws = {'width_ratios': (0.9, 0.05), 'wspace': 0.2}
-    fig = plt.figure()
-    fig.suptitle("Velocity Plot over Time")
-    
-    anim = animation.FuncAnimation(fig = fig, func = init_quiver, frames = Niter, interval = 50, blit = False)
-    return anim
-
 def main():
-    dx = 0.3
-    L = 50
-    N = int(L/dx)
+    # Run
+    N = int(50/0.3)
     t0 = time.perf_counter()
-    
-    anim_u, anim_v = solve_ns_explosion(1, 100, L, dx, 0.08, 20, N//2, N//2, 1000, 1000, 8, 2, 6, 0)
-    
+    anim_u, anim_v = solve_ns_explosion(1, 100, 50, 0.3, 0.02, 20, N//2, N//2, 1000, 1000, 20, 2, 6, 0)
     tf = time.perf_counter()
     print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
     

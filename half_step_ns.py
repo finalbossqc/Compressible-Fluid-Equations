@@ -8,7 +8,6 @@ import matplotlib.animation as animation
 from matplotlib.colors import LinearSegmentedColormap
 import time
 
-
 def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
     M, N = u.shape
 
@@ -29,6 +28,7 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
             j_minus_1 = j-1
 
             # Implement Periodic Boundary Conditions
+
             if (i == N-1):
                 i_plus_1 = 0
             if (i == 0):
@@ -73,7 +73,6 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
         i += 1
 
     return w1, w2
-
 
 def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
     M, N = u.shape
@@ -188,12 +187,10 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
         m1 += 1
 
     # Transform velocity back
-
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
     
     return u, v
-
 
 """
 Description: Initializes and solves the Navier stokes solver with a constant 
@@ -207,8 +204,6 @@ Arguments:
     Niter: 1x1 integer
         - the number of iterations
 """
-
-
 def solve_ns_const_force_1(L, dx, Niter):
     N = int(L/dx)
 
@@ -221,7 +216,6 @@ def solve_ns_const_force_1(L, dx, Niter):
     mu = 0.01
     dx = dx
     dt = 0.05
-
     err = np.zeros(Niter)
 
     ii = 0
@@ -257,7 +251,6 @@ def solve_ns_const_force_1(L, dx, Niter):
     anim_v = plot_animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
-
 
 """
 Description: Initializes the force density vector for the explosion problem.
@@ -297,7 +290,6 @@ Warnings:
     
 """
 
-
 def init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
     f1[icenter, jcenter, tstart:tend] = 0
     f2[icenter, jcenter, tstart:tend] = 0
@@ -325,7 +317,6 @@ def init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, e
             j += 1
         i += 1
     return f1, f2
-
 
 """
 Description: Initializes and solves the Navier stokes solver with an explosion.
@@ -362,7 +353,6 @@ Arguments:
         - 1 is for a regularized Dirac delta
 """
 
-
 def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
     N = int(L/dx)
 
@@ -396,7 +386,6 @@ def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, 
     anim_v = plot_animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
-
 
 """
 Description: A plotting function that creates an animated heatmap
@@ -441,6 +430,5 @@ def main():
     anim_v.save('v_plot.gif', writer=writer)
     plt.show()
     plt.close()
-
 
 main()
