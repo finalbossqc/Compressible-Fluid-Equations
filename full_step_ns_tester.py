@@ -519,3 +519,55 @@ def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, 
     anim_v = plot_ns.animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
+
+
+def main():
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter)
+    parser.add_argument("rho",type=float,help="density of fluid")
+    parser.add_argument("mu",type=float,help="viscosity of fluid")
+    parser.add_argument("dx",type=float,
+                        help="the grid size")
+    parser.add_argument("dt",type=float,help="the timestep size")
+    parser.add_argument("L",type=float,
+                        help="length of the fluid domain")
+    parser.add_argument("Niter",type=int,help="the number of iterations to run")
+    parser.add_argument("force",type=str,
+                        help="type of force distribution: \n"
+                        "   const1 : constant force in the x direction \n"
+                        "   gaussian : explosion force with gaussian distribution \n"
+                        "   delta : explosion force with dirac delta distribution \n"
+                        "   bound : no force, constant x initial velocity with no slip"
+                        " boundary conditions \n")
+    
+    args = parser.parse_args()
+    rho = args.rho
+    mu = args.mu
+    dx = args.dx
+    dt = args.dt
+    L = args.L
+    Niter = args.Niter
+    N = int(L/dx)
+    force = args.force
+    
+    anim_u = None
+    anim_v = None
+    
+    t0 = time.perf_counter()
+    
+    if (force == "gaussian"):
+        anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 0)
+    elif (force == "const1"):
+        anim_u, anim_v = solve_ns_const_force_1(rho, mu, L, dx, dt, Niter)
+    elif (force == "delta"):
+        anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 1)
+    elif (force == "bound"):
+        anim_u, anim_v = solve_ns_boundary(rho, mu, L, dx, dt, Niter)
+        
+    tf = time.perf_counter()
+    print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
+    
+    writer = animation.PillowWriter(fps=15,metadata=dict(artist='Me'),bitrate=1800)
+    anim_u.save('u_plot.gif', writer=writer)
+    anim_v.save('v_plot.gif', writer=writer)
+    plt.show()
+    plt.close()

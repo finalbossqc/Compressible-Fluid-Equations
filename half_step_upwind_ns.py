@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import scipy.fftpack as fft
-import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.colors import LinearSegmentedColormap
+import argparse
+from argparse import RawTextHelpFormatter
+import plot_ns
 import time
 
 def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
@@ -46,16 +47,16 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
             
             if (u[i, j] < 0):
                 Du1 = (u[i_plus_1, j] - u[i,j])/dx
-                Du2 = (u[i, j_plus_1] - u[i,j])/dx
+                Dv1 = (v[i_plus_1,j]-v[i,j])/dx
             else:
                 Du1 = (u[i,j] - u[i_minus_1,j])/dx
-                Du2 = (u[i,j] - u[i,j_minus_1])/dx
+                Dv1 = (v[i,j] - v[i_minus_1,j])/dx
             
             if (v[i,j] < 0):
-                Dv1 = (v[i_plus_1,j]-v[i,j])/dx
+                Du2 = (u[i, j_plus_1] - u[i,j])/dx
                 Dv2 = (v[i, j_plus_1]-v[i,j])/dx
             else:
-                Dv1 = (v[i,j] - v[i_minus_1,j])/dx
+                Du2 = (u[i,j] - u[i,j_minus_1])/dx
                 Dv2 = (v[i,j]- v[i,j_minus_1])/dx
                 
             
@@ -133,10 +134,6 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
                 a12 = -D_hat_1[m1,m2]*D_hat_2[m1,m2]/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2)
                 a21 = -D_hat_1[m1,m2]*D_hat_2[m1,m2]/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2)
                 a22 = (1 - D_hat_2[m1,m2]**2/(D_hat_1[m1,m2]**2 + D_hat_2[m1,m2]**2))
-                
-                if (np.isnan(a11)):
-                    print(m1, m2)
-                    exit()
             
             u_hat[m1,m2] = (w_hat_1[m1,m2]*a11 + w_hat_2[m1,m2]*a12) / (1 - mu*dt/(2*rho)*L_hat[m1,m2])
             v_hat[m1,m2] = (w_hat_1[m1,m2]*a21 + w_hat_2[m1,m2]*a22) / (1 - mu*dt/(2*rho)*L_hat[m1,m2])
@@ -196,6 +193,7 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
     
     return u, v
 
+
 """
 Description: Initializes and solves the Navier stokes solver with a constant 
 force density.
@@ -208,36 +206,50 @@ Arguments:
     Niter: 1x1 integer
         - the number of iterations
 """
-def solve_ns_const_force_1(L, dx, Niter):
+def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
     N = int(L/dx)
-    
+
     u = np.zeros((N, N, Niter))
     v = np.zeros((N, N, Niter))
     f1 = np.ones((N, N))
     f2 = np.zeros((N, N))
     
-    rho = 1
-    mu = 0.01
-    dx = dx
-    dt = 0.05
-    
+    err = np.zeros(Niter)
+
     ii = 0
     while (ii < Niter-1):
         print("iteration: ", ii)
-        u[:,:,ii+1], v[:,:,ii+1] = calculate_step(u[:,:,ii], v[:,:,ii], f1, f2, rho, mu, dx, dt)
-        ii+=1
+        u[:, :, ii+1], v[:, :, ii +
+                         1] = calculate_step(u[:, :, ii], v[:, :, ii], f1, f2, rho, mu, dx, dt)
+        err[ii] = np.abs(np.average(v[:, :, ii+1]-np.zeros((N, N))))
+        print(err[ii])
+        ii += 1
+
+    x = np.arange(0, Niter)
+    y = np.zeros(len(err))
+
+    for i in range(len(err)):
+        if (err[i] == 0):
+            y[i] = 0
+        else:
+            y[i] = np.log10(err[i])
+
+    plt.plot(x, y)
+    plt.show()
+    np.savetxt("half_step_error.txt", y[10:630])
 
     args = (rho, mu, dx, dt, Niter)
     arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ")
     params = []
-    
+
     for i in range(len(args)):
         params.append(str(arg_list[i]) + str(args[i]))
 
-    anim_u = plot_animated_heatmap(u, "u", params)
-    anim_v = plot_animated_heatmap(v, "v", params)
+    anim_u = plot_ns.animated_heatmap(u, "u", params)
+    anim_v = plot_ns.animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
+
 
 """
 Description: Initializes the force density vector for the explosion problem.
@@ -276,33 +288,47 @@ Warnings:
     self-interference and will mess with your results.
     
 """
-def init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
-    f1[icenter,jcenter,tstart:tend] = 0
-    f2[icenter,jcenter,tstart:tend] = 0
-    M, N, T = f1.shape;
+
+
+def init_explosion(f1, f2, dx, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
+    f1[icenter, jcenter, tstart:tend] = 0
+    f2[icenter, jcenter, tstart:tend] = 0
+    tcenter = (tstart + tend)/2
     
+    M, N, T = f1.shape
+
     def gauss_3d(i, j, t):
-        return magx*np.exp(-1*( (i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2)), magy*np.exp(-1*( (i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2))
+        return magx*np.exp(-1*((i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2)), magy*np.exp(-1*((i-icenter)**2 + (j-jcenter)**2 + (t-tstart)**2))
     
+    def delta_3d(i, j, t):
+        def phi(r):
+            if (r <= 2):
+                return 0.25*(1+np.cos(np.pi*r/2))
+            else:
+                return 0
+        
+        
+        return magx*(1/((4*dx)**3))*phi(i-icenter)*phi(j-jcenter)*phi(t-tcenter), magy*(1/((4*dx)**3))*phi(i-icenter)*phi(j-jcenter)*phi(t-tcenter)
+
     i = 0
     while (i < N):
         j = 0
         while (j < N):
             k = 0
             while (k < T):
-                if ((i-icenter)**2 + (j-jcenter)**2 <= radius**2 and k >= tstart and k <= tend):  
+                if ((i-icenter)**2 + (j-jcenter)**2 <= radius**2 and k >= tstart and k <= tend):
                     if (explosion_type == 0):
                         f1[i, j, k], f2[i, j, k] = gauss_3d(i, j, k)
                     elif (explosion_type == 1):
-                        #Implement this (TODO)
-                        pass
+                        f1[i, j, k], f2[i, j, k] = delta_3d(i, j, k)
                     else:
                         print("Invalid explosion type")
                         exit()
-                k+=1
-            j+=1
-        i+=1
+                k += 1
+            j += 1
+        i += 1
     return f1, f2
+
 
 """
 Description: Initializes and solves the Navier stokes solver with an explosion.
@@ -338,78 +364,37 @@ Arguments:
         - 0 is for a 3D Gaussian
         - 1 is for a regularized Dirac delta
 """
-def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type): 
+
+def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
     N = int(L/dx)
-    
+
     u = np.zeros((N, N, Niter))
     v = np.zeros((N, N, Niter))
     f1 = np.zeros((N, N, Niter))
     f2 = np.zeros((N, N, Niter))
-    
-    #Initialize f1 and f2 for explosion
-    
-    f1, f2 = init_explosion(f1, f2, icenter, jcenter, magx, magy, radius, tstart, tend, 0)
-    
+
+    # Initialize f1 and f2 for explosion
+
+    f1, f2 = init_explosion(f1, f2, dx, icenter, jcenter,
+                            magx, magy, radius, tstart, tend, 0)
+
     ii = 0
     while (ii < Niter-1):
         print(ii)
-        u[:,:,ii+1], v[:,:,ii+1] = calculate_step(u[:,:,ii], v[:,:,ii], f1[:,:,ii], f2[:,:,ii], rho, mu, dx, dt)
-        ii+=1
-    
+        u[:, :, ii+1], v[:, :, ii+1] = calculate_step(
+            u[:, :, ii], v[:, :, ii], f1[:, :, ii], f2[:, :, ii], rho, mu, dx, dt)
+        ii += 1
+
     args = (rho, mu, dx, dt, Niter, magx, magy, radius)
-    arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ", "magx: ", "magy: ", "radius: ")
+    arg_list = ("rho: ", "mu: ", "dx: ", "dt: ",
+                "Niter: ", "magx: ", "magy: ", "radius: ")
     params = []
-    
+
     for i in range(len(args)):
         params.append(str(arg_list[i]) + str(args[i]))
-    
-    #Display results with animated heat map
-    anim_u = plot_animated_heatmap(u, "u", params);
-    anim_v = plot_animated_heatmap(v, "v", params);
+
+    # Display results with animated heat map
+    anim_u = plot_ns.animated_heatmap(u, "u", params)
+    anim_v = plot_ns.animated_heatmap(v, "v", params)
+
     return anim_u, anim_v
-
-"""
-Description: A plotting function that creates an animated heatmap
-Arguments:
-    u: NxN double
-        - The velocity (either x or y velocity)
-    variable: string
-        - The name of the variable to be plotted.
-    params: tuple 
-        - A tuple of parameters to be put in the title
-"""
-def plot_animated_heatmap(u, variable, params):
-    _, _, Niter = u.shape
-    def init_heatmap(i):
-        ax.cla()
-        sns.heatmap(u[:,:,i],
-                    ax = ax,
-                    cbar = True,
-                    cbar_ax = cbar_ax,
-                    vmin = u.min(),
-                    vmax = u.max())
-    
-    grid_kws = {'width_ratios': (0.9, 0.05), 'wspace': 0.2}
-    fig, (ax, cbar_ax) = plt.subplots(1, 2, gridspec_kw = grid_kws, figsize = (10, 8))
-    fig.suptitle("Velocity " + variable + " Parameter List: " + str(params))
-    anim = animation.FuncAnimation(fig = fig, func = init_heatmap, frames = Niter, interval = 50, blit = False)
-    return anim
-
-def main():
-    dx = 0.3
-    L = 50
-    N = int(L/dx)
-    t0 = time.perf_counter()
-    
-    anim_u, anim_v = solve_ns_explosion(1, 100, L, dx, 0.08, 20, N//2, N//2, 1000, 1000, 8, 2, 6, 0)
-    
-    tf = time.perf_counter()
-    print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
-    
-    writer = animation.PillowWriter(fps=15,metadata=dict(artist='Me'),bitrate=1800)
-    anim_u.save('u_plot.gif', writer=writer)
-    anim_v.save('v_plot.gif', writer=writer)
-    plt.show()
-    plt.close()
-
-main()
