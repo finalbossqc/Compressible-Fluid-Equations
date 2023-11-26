@@ -152,9 +152,6 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt, **kwargs):
     if (M != N):
         print("Grid must be square.")
         exit()
-    
-    bound_points = kwargs.get("bound")
-    u, v = update_bound(u, v, bound_points)
         
     A = 1j*np.zeros((N,N))
     k1 = 0
@@ -214,19 +211,11 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt, **kwargs):
                 v_hat[k1,k2] = (w_hat_2[k1,k2] - 1j*dt/(rho*dx)*np.sin(2*np.pi*k2/N)*p_hat[k1,k2]) / A[k1,k2]
             k2+=1
         k1+=1
-    
+
     #Transform velocity back
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
-    return u, v
 
-
-def update_bound(u, v, bound_points):
-    if (bound_points != None):
-        for ii in range(len(bound_points)):
-            i, j = bound_points[ii]
-            u[i, j] = 0
-            v[i, j] = 0
     return u, v
 
 """
@@ -267,10 +256,9 @@ def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
             y[i] = 0
         else:
             y[i] = np.log10(err[i])
-
-    plt.plot(x, y)
-    np.savetxt("half_step_error.txt", y[10:630])
-
+    
+    np.savetxt("full_step_error.txt", y[10:630])
+    
     args = (rho, mu, dx, dt, Niter)
     arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ")
     params = []
@@ -488,7 +476,7 @@ Arguments:
 
 def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
     N = int(L/dx)
-
+    
     u = np.zeros((N, N, Niter))
     v = np.zeros((N, N, Niter))
     f1 = np.zeros((N, N, Niter))

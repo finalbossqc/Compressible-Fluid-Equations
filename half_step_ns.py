@@ -9,7 +9,6 @@ from argparse import RawTextHelpFormatter
 import plot_ns
 import time
 
-
 def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
     M, N = u.shape
 
@@ -30,6 +29,7 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
             j_minus_1 = j-1
 
             # Implement Periodic Boundary Conditions
+
             if (i == N-1):
                 i_plus_1 = 0
             if (i == 0):
@@ -74,7 +74,6 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
         i += 1
 
     return w1, w2
-
 
 def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
     M, N = u.shape
@@ -189,12 +188,10 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
         m1 += 1
 
     # Transform velocity back
-
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
     
     return u, v
-
 
 """
 Description: Initializes and solves the Navier stokes solver with a constant 
@@ -215,7 +212,11 @@ def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
     v = np.zeros((N, N, Niter))
     f1 = np.ones((N, N))
     f2 = np.zeros((N, N))
-    
+
+    rho = 1
+    mu = 0.01
+    dx = dx
+    dt = 0.05
     err = np.zeros(Niter)
 
     ii = 0
@@ -251,7 +252,6 @@ def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
     anim_v = plot_ns.animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
-
 
 """
 Description: Initializes the force density vector for the explosion problem.
@@ -291,7 +291,6 @@ Warnings:
     
 """
 
-
 def init_explosion(f1, f2, dx, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
     f1[icenter, jcenter, tstart:tend] = 0
     f2[icenter, jcenter, tstart:tend] = 0
@@ -330,7 +329,6 @@ def init_explosion(f1, f2, dx, icenter, jcenter, magx, magy, radius, tstart, ten
             j += 1
         i += 1
     return f1, f2
-
 
 """
 Description: Initializes and solves the Navier stokes solver with an explosion.
