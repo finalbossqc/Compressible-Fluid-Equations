@@ -9,6 +9,7 @@ from argparse import RawTextHelpFormatter
 import plot_ns
 import time
 
+
 def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
     M, N = u.shape
 
@@ -29,7 +30,6 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
             j_minus_1 = j-1
 
             # Implement Periodic Boundary Conditions
-
             if (i == N-1):
                 i_plus_1 = 0
             if (i == 0):
@@ -74,6 +74,7 @@ def calculate_w(u, v, f1, f2, rho, mu, dx, dt, half):
         i += 1
 
     return w1, w2
+
 
 def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
     M, N = u.shape
@@ -188,10 +189,12 @@ def calculate_step(u, v, f1, f2, rho, mu, dx, dt):
         m1 += 1
 
     # Transform velocity back
+
     u = np.real(fft.ifft2(u_hat))
     v = np.real(fft.ifft2(v_hat))
     
     return u, v
+
 
 """
 Description: Initializes and solves the Navier stokes solver with a constant 
@@ -212,11 +215,7 @@ def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
     v = np.zeros((N, N, Niter))
     f1 = np.ones((N, N))
     f2 = np.zeros((N, N))
-
-    rho = 1
-    mu = 0.01
-    dx = dx
-    dt = 0.05
+    
     err = np.zeros(Niter)
 
     ii = 0
@@ -252,6 +251,7 @@ def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
     anim_v = plot_ns.animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
+
 
 """
 Description: Initializes the force density vector for the explosion problem.
@@ -291,6 +291,7 @@ Warnings:
     
 """
 
+
 def init_explosion(f1, f2, dx, icenter, jcenter, magx, magy, radius, tstart, tend, explosion_type):
     f1[icenter, jcenter, tstart:tend] = 0
     f2[icenter, jcenter, tstart:tend] = 0
@@ -329,6 +330,7 @@ def init_explosion(f1, f2, dx, icenter, jcenter, magx, magy, radius, tstart, ten
             j += 1
         i += 1
     return f1, f2
+
 
 """
 Description: Initializes and solves the Navier stokes solver with an explosion.
@@ -398,3 +400,53 @@ def solve_ns_explosion(rho, mu, L, dx, dt, Niter, icenter, jcenter, magx, magy, 
     anim_v = plot_ns.animated_heatmap(v, "v", params)
 
     return anim_u, anim_v
+
+
+def main():
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter)
+    parser.add_argument("rho",type=float,help="density of fluid")
+    parser.add_argument("mu",type=float,help="viscosity of fluid")
+    parser.add_argument("dx",type=float,
+                        help="the grid size")
+    parser.add_argument("dt",type=float,help="the timestep size")
+    parser.add_argument("L",type=float,
+                        help="length of the fluid domain")
+    parser.add_argument("Niter",type=int,help="the number of iterations to run")
+    parser.add_argument("force",type=str,
+                        help="type of force distribution: \n"
+                        "   const1 : constant force in the x direction \n"
+                        "   gaussian : explosion force with gaussian distribution \n"
+                        "   delta : explosion force with dirac delta distribution \n")
+    
+    args = parser.parse_args()
+    rho = args.rho
+    mu = args.mu
+    dx = args.dx
+    dt = args.dt
+    L = args.L
+    Niter = args.Niter
+    N = int(L/dx)
+    force = args.force
+    
+    anim_u = None
+    anim_v = None
+    
+    t0 = time.perf_counter()
+    
+    if (force == "gaussian"):
+        anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 0)
+    elif (force == "const1"):
+        anim_u, anim_v = solve_ns_const_force_1(rho, mu, L, dx, dt, Niter)
+    elif (force == "delta"):
+        anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 1)
+        
+    tf = time.perf_counter()
+    print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
+    
+    writer = animation.PillowWriter(fps=15,metadata=dict(artist='Me'),bitrate=1800)
+    anim_u.save('u_plot.gif', writer=writer)
+    anim_v.save('v_plot.gif', writer=writer)
+    plt.show()
+    plt.close()
+
+main()
