@@ -15,7 +15,7 @@ full_step_ns.py
 full_step_ns_tester.py
 - Runs a Navier Stokes full step solver with upwind discretization of the convective term.
 * Can be run in the terminal.
-** Type python3 full_step_ns.py -h for details on how to run it
+** Type "python3 full_step_ns_tester.py -h" for details on how to run it
 
 half_step_ns.py
 - Runs a Navier Stokes half step solver without upwind discretization of the convective term.
@@ -33,7 +33,7 @@ half_step_ns.py
 half_step_ns_tester.py
 - Runs a Navier Stokes half step solver without upwind discretization of the convective term.
 * Can be run in the terminal.
-** Type python3 full_step_ns.py -h for details on how to run it
+** Type "python3 half_step_ns_tester.py -h" for details on how to run it
 
 half_step_upwind_ns.py
 - Runs a Navier Stokes half step solver with upwind discretization of the convective term.
@@ -51,7 +51,7 @@ half_step_upwind_ns.py
 half_step_upwind_ns_tester.py
 - Runs a Navier Stokes half step solver with upwind discretization of the convective term.
 * Can be run in the terminal.
-** Type python3 full_step_ns.py -h for details on how to run it
+** Type "python3 half_step_upwind_ns_tester.py -h" for details on how to run it
 
 half_step_upwind_ns_3D.py
 - Runs a Navier Stokes half step solver with upwind discretization of the convective term in 3D.
