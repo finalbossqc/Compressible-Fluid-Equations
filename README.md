@@ -68,3 +68,7 @@ half_step_upwind_ns_3D.py
 
 test_ns.py
 - Contains several tests for all three types of Navier Stokes solvers.
+
+
+Link for image in miscellaneous:
+https://comtessablog.files.wordpress.com/2018/04/ncview_s1.png
