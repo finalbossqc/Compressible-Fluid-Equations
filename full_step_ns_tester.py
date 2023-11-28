@@ -242,6 +242,8 @@ Arguments:
         - the number of iterations
 """
 def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
+    t0 = time.perf_counter()
+    
     N = int(L/dx)
 
     u = np.zeros((N, N, Niter))
@@ -258,6 +260,9 @@ def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
                          1] = calculate_step(u[:, :, ii], v[:, :, ii], f1, f2, rho, mu, dx, dt)
         err[ii] = np.abs(np.average(v[:, :, ii+1]-np.zeros((N, N))))
         ii += 1
+    
+    tf = time.perf_counter()
+    print("time taken", np.round(100.0*(tf - t0))/100.0)
 
     x = np.arange(0, Niter)
     y = np.zeros(len(err))
@@ -552,7 +557,7 @@ def main():
     anim_u = None
     anim_v = None
     
-    t0 = time.perf_counter()
+   
     
     if (force == "gaussian"):
         anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 0)
@@ -562,12 +567,10 @@ def main():
         anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 1)
     elif (force == "bound"):
         anim_u, anim_v = solve_ns_boundary(rho, mu, L, dx, dt, Niter)
-        
-    tf = time.perf_counter()
-    print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
     
     writer = animation.PillowWriter(fps=15,metadata=dict(artist='Me'),bitrate=1800)
     anim_u.save('u_plot.gif', writer=writer)
     anim_v.save('v_plot.gif', writer=writer)
     plt.show()
     plt.close()
+main()

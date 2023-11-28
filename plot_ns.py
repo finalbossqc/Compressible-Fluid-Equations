@@ -30,4 +30,8 @@ def animated_heatmap(u, variable, params):
     fig, (ax, cbar_ax) = plt.subplots(1, 2, gridspec_kw = grid_kws, figsize = (10, 8))
     fig.suptitle("Velocity " + variable + " Parameter List: " + str(params))
     anim = animation.FuncAnimation(fig = fig, func = init_heatmap, frames = Niter, interval = 50, blit = False)
+    
+    writer = animation.PillowWriter(fps=15,metadata=dict(artist='Me'),bitrate=1800)
+    anim.save(variable + '.gif', writer=writer)
+    
     return anim

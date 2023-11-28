@@ -434,19 +434,14 @@ def main():
     t0 = time.perf_counter()
     
     if (force == "gaussian"):
-        anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 0)
+        solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 0)
     elif (force == "const1"):
-        anim_u, anim_v = solve_ns_const_force_1(rho, mu, L, dx, dt, Niter)
+        solve_ns_const_force_1(rho, mu, L, dx, dt, Niter)
     elif (force == "delta"):
-        anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 1)
+        solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 6, 1)
         
     tf = time.perf_counter()
     print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")
-    
-    writer = animation.PillowWriter(fps=15,metadata=dict(artist='Me'),bitrate=1800)
-    anim_u.save('u_plot.gif', writer=writer)
-    anim_v.save('v_plot.gif', writer=writer)
-    plt.show()
     plt.close()
 
 main()
