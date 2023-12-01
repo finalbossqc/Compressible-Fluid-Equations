@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import plot_ns
 
 def test1():
-    L = 50
-    dx = 0.01
+    L = 20
+    dx = 0.2
     N = int(L/dx)
     Niter = 1000
     
@@ -36,8 +36,8 @@ def test1():
     plt.savefig("half_step_upwind_probe_1.png")
 
 def test2():
-    L = 0.5
-    dx = 0.01
+    L = 50
+    dx = 0.2
     N = int(L/dx)
     Niter = 10
     
@@ -62,10 +62,10 @@ def test2():
     plt.savefig("half_step_upwind_probe_2.png")
 
 def test3():
-    L = 0.5
-    dx = 0.01
+    L = 50
+    dx = 0.2
     N = int(L/dx)
-    Niter = 1000
+    Niter = 10
     
     rho = 1
     mu = 10
@@ -175,7 +175,7 @@ def probe_point(solver, solver_name, u, v, f1, f2, rho, mu, dx, dt, Niter, pi, p
     # Added axis labels and title
     ax[0].set_xlabel('Timesteps')
     ax[0].set_ylabel('Velocity (u)')
-    ax[1].set_xlabel('Time')
+    ax[1].set_xlabel('Timesteps')
     ax[1].set_ylabel('Velocity (v)')
     fig.suptitle("Velocity at a Randomly Sampled Grid Point with " + solver_name + " Solver")
     
@@ -259,4 +259,4 @@ def main():
     plot_analytic_res(hs, "hs_converge")
     plot_analytic_res(hsu, "hsu_converge")
     
-main()
+test3()

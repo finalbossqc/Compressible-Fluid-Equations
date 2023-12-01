@@ -432,11 +432,11 @@ def main():
     t0 = time.perf_counter()
     
     if (force == "gaussian"):
-        solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 10, 0)
+        anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 10, 0)
     elif (force == "const1"):
-        solve_ns_const_force_1(rho, mu, L, dx, dt, Niter)
+        anim_u, anim_v = solve_ns_const_force_1(rho, mu, L, dx, dt, Niter)
     elif (force == "delta"):
-        solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 10, 1)
+        anim_u, anim_v = solve_ns_explosion(rho, mu, L, dx, dt, Niter, N//2, N//2, 100, 100, 8, 2, 10, 1)
         
     tf = time.perf_counter()
     print("time to run: " + str(round(100*(tf-t0))/100.0) + " (s)")

@@ -2,12 +2,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import scipy.fftpack as fft
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import argparse
-from argparse import RawTextHelpFormatter
-import plot_ns
-import time
 
 def calculate_w(u, v, w, f1, f2, f3, rho, mu, dx, dt, half):
     _, _, N = u.shape
@@ -293,17 +287,7 @@ def solve_ns_const_force_1(rho, mu, L, dx, dt, Niter):
         u[:, :, :, ii+1], v[:, :, :, ii +1], w[:, :,:, ii+1] = calculate_step(u[:, :, :, ii], v[:, :, :, ii], w[:,:,:,ii], f1[:, :, :, ii], f2[:, :, :, ii], f3[:, :, :, ii], rho, mu, dx, dt)
         ii += 1
 
-    args = (rho, mu, dx, dt, Niter)
-    arg_list = ("rho: ", "mu: ", "dx: ", "dt: ", "Niter: ")
-    params = []
-
-    for i in range(len(args)):
-        params.append(str(arg_list[i]) + str(args[i]))
-
-    #anim_u = plot_ns.animated_heatmap(u, "u", params)
-    #anim_v = plot_ns.animated_heatmap(v, "v", params)
-
-solve_ns_const_force_1(1, 1, 1, 0.1, 0.1, 100)
+solve_ns_const_force_1(1, 1, 50, 0.2, 0.1, 100)
 
 
 
