@@ -70,5 +70,10 @@ test_ns.py
 - Contains several tests for all three types of Navier Stokes solvers.
 
 
+The OpenFoam simulation is a single configured simulation of a simple LES model that was used to compare the computational power between LES and DNS.
+
+Under miscellaneous is a simple matlab program that applies an image of a fluid to a course grain, which was used as a visual aid in our presentation.
+
+
 Link for image in miscellaneous:
 https://comtessablog.files.wordpress.com/2018/04/ncview_s1.png
